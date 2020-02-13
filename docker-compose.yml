@@ -4,41 +4,45 @@ services:
   app:
     container_name: laravel
     build:
-      context: ./
-      dockerfile: docker/app.dockerfile
+      context: .
+      dockerfile: Dockerfile
     volumes:
-      - ./storage:/var/www/storage
-    env_file: '.env.prod'
-    environment:
-      - "DB_HOST=database"
-      - "REDIS_HOST=cache"
+      - ./:/var/www
+    env_file: .env
+    depends_on:
+      - database
+    networks:
+      - backend
 
   web:
-    container_name: laravel_nginx
-    build:
-      context: ./
-      dockerfile: docker/web.dockerfile
+    image: nginx:alpine
+    container_name: nginx
     volumes:
-      - ./storage/logs/:/var/log/nginx
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - app
     ports:
-      - 8990:80
+      - "8990:80"
+    networks:
+      - backend
 
   database:
-    container_name: laravel_mysql
-    image: mysql:5.7
+    image: mysql:latest
+    container_name: mysql
     volumes:
-      - dbdata:/var/lib/mysql
+      - mysql:/var/lib/mysql
     environment:
-      - "MYSQL_DATABASE=laravel"
-      - "MYSQL_USER=root"
-      - "MYSQL_PASSWORD=root"
-      - "MYSQL_ROOT_PASSWORD=root"
+      - MYSQL_DATABASE=${DB_DATABASE}
+      - MYSQL_USER=${DB_USERNAME}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
     ports:
-      - 8991:3306
+      - "3306:3306"
+    networks:
+      - backend
 
-  cache:
-    container_name: laravel_redis
-    image: redis:3.0-alpine
+networks:
+  backend:
 
 volumes:
-  dbdata:
+  mysql:
